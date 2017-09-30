@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+PASSWORD="A*Very*Bad*Passw8rd"
+
+reqRoot() {
+  curl -o /etc/strongswan/ipsec.d/cacerts/root-ca.pem 'https://ejbca.example.com/ejbca/publicweb/webdist/certdist?cmd=cacert&issuer=CN%3DRootCA-RSA&level=0'
+}
+
+
+reqCA() {
+if [ -f /etc/strongswan/ipsec.d/cacerts/caCert.der ]; then
+  rm /etc/strongswan/ipsec.d/cacerts/caCert.der
+fi
+strongswan scepclient \
+ --out cacert \
+ --caname VPN-CA-RSA \
+ --url https://ejbca.example.com/pkiclient.exe \
+ --method post \
+ --debug 1 \
+
+}
+
+
+reqCert() {
+if [ -f /etc/strongswan/ipsec.d/reqs/myReq.der ]; then
+  rm -f /etc/strongswan/ipsec.d/reqs/myReq.der
+fi
+if [ -f /etc/strongswan/ipsec.d/private/myKey.der ]; then
+  rm -f /etc/strongswan/ipsec.d/private/myKey.der
+fi
+strongswan scepclient \
+ --out pkcs1 \
+ --out pkcs7 \
+ --out cert \
+ --keylength=2048 \
+ --algorithm enc=aes256 \
+ --algorithm dgst=sha256 \
+ --algorithm sig=sha256 \
+ --dn "cn=vpn.example.com" \
+ --subjectAltName "dns=vpn.example.com" \
+ --password $PASSWORD \
+ --caname VPN-CA-RSA \
+ --url https://ejbca.example.com/pkiclient.exe \
+ --method post \
+ --debug 1 \
+
+}
+
+
+cleanUp() {
+  openssl x509 -inform der -outform pem -in /etc/strongswan/ipsec.d/cacerts/caCert.der -out /etc/strongswan/ipsec.d/cacerts/caCert.pem
+  rm -f /etc/strongswan/ipsec.d/cacerts/caCert.der
+}
+
+
+reqRoot
+reqCA
+reqCert
+
