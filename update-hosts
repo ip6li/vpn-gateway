@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+#
+# Makes an AdAway for Unbound
+
+PID=$$
+count=0
+rm -f hosts.txt*
+
+for i in "https://adaway.org/hosts.txt" "https://hosts-file.net/ad_servers.txt" "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext"; do
+  #curl -o hosts.${count}.txt "$i"
+  dos2unix hosts.${count}.txt
+  cat hosts.${count}.txt | grep -v '^#' | sed 's/#.*//g' | sed 's/\s\{1,\}/ /g' | sed 's/[ \t]*$//' >> hosts.txt.tmp
+  let count+=1
+done
+
+sort --ignore-case --unique --key 2 --output=hosts.txt hosts.txt.tmp
+rm -f hosts.txt.tmp
+cat hosts.txt | grep '^127\.0\.0\.1' | awk '{print "local-zone: \""$2"\" redirect\nlocal-data: \""$2" A 127.0.0.1\""}' > /etc/unbound/local.d/ads.conf
+
